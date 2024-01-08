@@ -10,6 +10,7 @@ from pathlib import Path
 from time import sleep
 
 SLEEP_INTERVAL = 0.1
+SPEED_INCREMENT = 20
 
 def pdf_to_text(pdf_file: str, first_page: int, tmp_dir: Path) -> Path:
     tmp_txt = tmp_dir / "pdf.txt"
@@ -115,10 +116,10 @@ def main():
                     if chunk_i > 0:
                         chunk_i -= 1
                 elif cmd == "i":
-                    curr_speed += 10
+                    curr_speed += SPEED_INCREMENT
                     print(f"Next chunk speed = {curr_speed} words/min")
                 elif cmd == "d":
-                    curr_speed -= 10
+                    curr_speed -= SPEED_INCREMENT
                     print(f"Next chunk speed = {curr_speed} words/min")
                 elif cmd == "q":
                     stop_playing.set()
