@@ -74,7 +74,10 @@ def get_cmd():
     else:
         return ""
     
-def print_cmds():
+def print_prompt(chunk_i: int, chunk_paths: List[Path]):
+    chunk_path = chunk_paths[chunk_i]
+    print(f"\nChunk {chunk_i}/{len(chunk_paths)}: ")
+    print_txt_file(chunk_path)
     print("""Commands: [n]ext chunk, [p]revious chunk, 
           [i]ncrease speed, [d]ecrease speed, [q]uit""")
     print("> ", end='')
@@ -100,11 +103,10 @@ def main():
         while chunk_i < len(chunk_paths):
             chunk_path = chunk_paths[chunk_i]
             tmp_wav = txt_to_wav(chunk_path, curr_speed)
-            print_txt_file(chunk_path)
             stop_playing = Event()
             thread = play_wav(tmp_wav, stop_playing)
-            sleep(SLEEP_INTERVAL)
-            print_cmds()
+            
+            print_prompt(chunk_i, chunk_paths)
             prev_chunk_i = chunk_i
             while thread.is_alive():
                 cmd = get_cmd()
