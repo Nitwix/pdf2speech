@@ -2,9 +2,10 @@
 Simple python application to read pdf's out loud
 
 # Usage
-```usage: pdf2speech.py [-h] [--first_page FIRST_PAGE] [--speed SPEED] [--chunk_size CHUNK_SIZE] filename
+```
+usage: pdf2speech.py [-h] [--first_page FIRST_PAGE] [--speed SPEED] [--chunk_size CHUNK_SIZE] filename
 
-Convert PDF text to speech and play it.
+Listen to PDF files using text-to-speech
 
 positional arguments:
   filename              PDF filename
