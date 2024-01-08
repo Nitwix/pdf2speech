@@ -23,7 +23,8 @@ def txt_to_wav(txt_path: Path, speed: int) -> Path:
     subprocess.run(["espeak", 
                     "-f", str(txt_path), 
                     "-w", str(tmp_wav), 
-                    "-s", str(speed)], 
+                    "-s", str(speed),
+                    "-v", "mb-en1"], # use mbrola voices
                     check=True)
     return tmp_wav
 

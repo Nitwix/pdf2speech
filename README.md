@@ -24,6 +24,7 @@ Example: `python pdf2speech.py test_data/pg11.pdf`
 
 - [`pdftotext`](https://en.wikipedia.org/wiki/Pdftotext), install package `poppler-utils` on linux.
 - [`espeak`](https://espeak.sourceforge.net/), install package `espeak` on linux.
+    - [mbrola voices for espeak](https://github.com/espeak-ng/espeak-ng/blob/master/docs/mbrola.md#installation-of-standard-packages) also need to be installed to get a better sounding voice
 - [`aplay`](https://github.com/alsa-project/alsa-utils), install package `alsa-utils` on linux.
 
 # Note
