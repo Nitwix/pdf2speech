@@ -78,7 +78,7 @@ def print_prompt(chunk_i: int, chunk_paths: List[Path]):
     chunk_path = chunk_paths[chunk_i]
     print(f"\nChunk {chunk_i+1}/{len(chunk_paths)}: ")
     print_txt_file(chunk_path)
-    print("""Commands: [n]ext chunk, [p]revious chunk, 
+    print("""Commands: [t]oggle pause/play, [n]ext chunk, [p]revious chunk, 
           [i]ncrease speed, [d]ecrease speed, [q]uit""")
     print("> ", end='')
     sys.stdout.flush()
@@ -92,22 +92,27 @@ def main():
     parser.add_argument("--chunk_size", default=5, type=int, help="Text chunks size")
 
     args = parser.parse_args()
-    curr_speed = args.speed
-    chunk_i = 0
 
     with TemporaryDirectory(prefix="pdf2speech_") as tmp_dir:
         tmp_dir_path = Path(tmp_dir)
         pdf_txt_path = pdf_to_text(args.filename, args.first_page, tmp_dir_path)
         chunk_paths = file_make_chunks(tmp_dir_path, pdf_txt_path, args.chunk_size)
 
+        curr_speed = args.speed
+        chunk_i = 0
+        is_playing = True
         while chunk_i < len(chunk_paths):
+            while not is_playing:
+                cmd = input("To continue playing, enter [t] > ")
+                if cmd == "t":
+                    is_playing = True
+
             chunk_path = chunk_paths[chunk_i]
             tmp_wav = txt_to_wav(chunk_path, curr_speed)
             stop_playing = Event()
             thread = play_wav(tmp_wav, stop_playing)
-            
-            print_prompt(chunk_i, chunk_paths)
             prev_chunk_i = chunk_i
+            print_prompt(chunk_i, chunk_paths)
             while thread.is_alive():
                 cmd = get_cmd()
                 if cmd == "n":
@@ -126,12 +131,15 @@ def main():
                 elif cmd == "q":
                     stop_playing.set()
                     chunk_i = len(chunk_paths) + 1
+                elif cmd == "t":
+                    stop_playing.set()
+                    is_playing = False
                 elif cmd == "":
                     pass
                 else:
                     print(f"Unkown command: {cmd}")
             stop_playing.set()
-            if prev_chunk_i == chunk_i:
+            if prev_chunk_i == chunk_i and is_playing:
                 chunk_i += 1
 
 
