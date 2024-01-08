@@ -24,3 +24,6 @@ Example: `python pdf2speech.py test_data/pg11.pdf`
 - [`pdftotext`](https://en.wikipedia.org/wiki/Pdftotext), install package `poppler-utils` on linux.
 - [`espeak`](https://espeak.sourceforge.net/), install package `espeak` on linux.
 - [`aplay`](https://github.com/alsa-project/alsa-utils), install package `alsa-utils` on linux.
+
+# Note
+This project was developed in a few hours of my spare time. If someone wants to build on this and maybe submit pull requests to improve it, I'm happy to take a look at it.
