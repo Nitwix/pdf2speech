@@ -76,7 +76,7 @@ def get_cmd():
     
 def print_prompt(chunk_i: int, chunk_paths: List[Path]):
     chunk_path = chunk_paths[chunk_i]
-    print(f"\nChunk {chunk_i}/{len(chunk_paths)}: ")
+    print(f"\nChunk {chunk_i+1}/{len(chunk_paths)}: ")
     print_txt_file(chunk_path)
     print("""Commands: [n]ext chunk, [p]revious chunk, 
           [i]ncrease speed, [d]ecrease speed, [q]uit""")
