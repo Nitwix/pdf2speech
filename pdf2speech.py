@@ -8,9 +8,11 @@ from threading import Thread, Event
 from typing import List
 from pathlib import Path
 from time import sleep
+import requests
 
 SLEEP_INTERVAL = 0.1
 SPEED_INCREMENT = 20
+DEFAULT_SPEED_WPM = 200
 
 def pdf_to_text(pdf_file: str, first_page: int, tmp_dir: Path) -> Path:
     tmp_txt = tmp_dir / "pdf.txt"
@@ -18,7 +20,7 @@ def pdf_to_text(pdf_file: str, first_page: int, tmp_dir: Path) -> Path:
                     str(first_page), pdf_file, str(tmp_txt)], check=True)
     return tmp_txt
 
-def txt_to_wav(txt_path: Path, speed: int) -> Path:
+def txt_to_wav_espeak(txt_path: Path, speed: int) -> Path:
     tmp_wav = txt_path.with_suffix(".wav")
     subprocess.run(["espeak", 
                     "-f", str(txt_path), 
@@ -27,6 +29,44 @@ def txt_to_wav(txt_path: Path, speed: int) -> Path:
                     "-v", "mb-en1"], # use mbrola voices
                     check=True)
     return tmp_wav
+
+
+def wpm_speed_to_length_scale(wpm_speed: int) -> float:
+    return DEFAULT_SPEED_WPM / wpm_speed
+
+def txt_to_wav_mimic3(txt_path: Path, speed_wpm: int) -> Path:
+    """Use mimic3 engine running through docker webserver.
+    See for installation:
+    https://mycroft-ai.gitbook.io/docs/mycroft-technologies/mimic-tts/mimic-3#docker-image
+    See for API docs:
+    https://mycroft-ai.gitbook.io/docs/mycroft-technologies/mimic-tts/mimic-3#web-server
+    """
+    text = ""
+    with open(txt_path, "r") as txt_file:
+        text = txt_file.read()
+
+    url = "http://localhost:59125/api/tts"
+    params = {
+        'text': text,
+        'voice': 'en_UK/apope_low',
+        'noiseScale': 0.667,
+        'noiseW': 0.8,
+        'lengthScale': wpm_speed_to_length_scale(speed_wpm),
+        'ssml': False,
+        'audioTarget': 'client'
+    }
+
+    response = requests.get(url, params=params)
+
+    tmp_wav = txt_path.with_suffix(".wav")
+    if response.status_code == 200:
+        with open(tmp_wav, 'wb') as f:
+            f.write(response.content)
+        # print(f"Audio file saved to {tmp_wav}")
+    else:
+        print(f"Mimic3 TTS request failed: {response}")
+    return tmp_wav
+
 
 def play_wav(wav_path: Path, stop_playing: Event) -> Thread:
     def play():
@@ -89,8 +129,10 @@ def main():
     parser = argparse.ArgumentParser(description="Listen to PDF files using text-to-speech")
     parser.add_argument("filename", help="PDF filename")
     parser.add_argument("--first_page", default=1, type=int, help="First page number")
-    parser.add_argument("--speed", default=180, type=int, help="Speech speed (words per minute)")
+    parser.add_argument("--speed", default=DEFAULT_SPEED_WPM, type=int, help="Speech speed (words per minute)")
     parser.add_argument("--chunk_size", default=5, type=int, help="Text chunks size")
+    parser.add_argument("--engine", choices=["espeak", "mimic3"], default="mimic3",
+                        help="Engine used for TTS")
 
     args = parser.parse_args()
 
@@ -109,7 +151,10 @@ def main():
                     is_playing = True
 
             chunk_path = chunk_paths[chunk_i]
-            tmp_wav = txt_to_wav(chunk_path, curr_speed)
+            if args.engine == "espeak":
+                tmp_wav = txt_to_wav_espeak(chunk_path, curr_speed)
+            elif args.engine == "mimic3":
+                tmp_wav = txt_to_wav_mimic3(chunk_path, curr_speed)
             stop_playing = Event()
             thread = play_wav(tmp_wav, stop_playing)
             prev_chunk_i = chunk_i
