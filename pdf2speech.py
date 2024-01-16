@@ -13,6 +13,7 @@ import requests
 SLEEP_INTERVAL = 0.1
 SPEED_INCREMENT = 20
 DEFAULT_SPEED_WPM = 200
+TXT_CHUNK_SPLIT_CHAR = "."
 
 def pdf_to_text(pdf_file: str, first_page: int, tmp_dir: Path) -> Path:
     tmp_txt = tmp_dir / "pdf.txt"
@@ -41,6 +42,10 @@ def txt_to_wav_mimic3(txt_path: Path, speed_wpm: int) -> Path:
     See for API docs:
     https://mycroft-ai.gitbook.io/docs/mycroft-technologies/mimic-tts/mimic-3#web-server
     """
+    tmp_wav = txt_path.with_suffix(f".s_{speed_wpm}.wav")
+    if os.path.exists(tmp_wav):
+        return tmp_wav
+
     text = ""
     with open(txt_path, "r") as txt_file:
         text = txt_file.read()
@@ -58,7 +63,6 @@ def txt_to_wav_mimic3(txt_path: Path, speed_wpm: int) -> Path:
 
     response = requests.get(url, params=params)
 
-    tmp_wav = txt_path.with_suffix(".wav")
     if response.status_code == 200:
         with open(tmp_wav, 'wb') as f:
             f.write(response.content)
@@ -83,9 +87,9 @@ def play_wav(wav_path: Path, stop_playing: Event) -> Thread:
     return thread
 
 def text_cut_chunks(txt: str, chunk_size: int) -> List[str]:
-    words = txt.split("\n")
+    words = txt.split(TXT_CHUNK_SPLIT_CHAR)
     chunk_lists = [words[i:i + chunk_size] for i in range(0, len(words), chunk_size)]
-    return ["\n".join(l) for l in chunk_lists]
+    return [TXT_CHUNK_SPLIT_CHAR.join(l) for l in chunk_lists]
 
 def file_make_chunks(tmp_dir: Path, txt_path: Path, chunk_size: int) -> List[Path]:
     with open(txt_path, "r") as txt_file:
@@ -155,6 +159,12 @@ def main():
                 tmp_wav = txt_to_wav_espeak(chunk_path, curr_speed)
             elif args.engine == "mimic3":
                 tmp_wav = txt_to_wav_mimic3(chunk_path, curr_speed)
+                next_chunk_i = chunk_i + 1
+                if next_chunk_i < len(chunk_paths):
+                    next_chunk = chunk_paths[next_chunk_i]
+                    # prefetch the next chunk with current speed
+                    pf_thread = Thread(target=txt_to_wav_mimic3, args=(next_chunk, curr_speed))
+                    pf_thread.start()
             stop_playing = Event()
             thread = play_wav(tmp_wav, stop_playing)
             prev_chunk_i = chunk_i
