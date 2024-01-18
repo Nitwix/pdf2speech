@@ -25,6 +25,7 @@ Example: `python pdf2speech.py test_data/pg11.pdf`
 # Requirements
 
 - [`pdftotext`](https://en.wikipedia.org/wiki/Pdftotext), install package `poppler-utils` on linux.
+- [`krop`](https://arminstraub.com/software/krop#install) if `--two_columns` option needed
 - [`espeak`](https://espeak.sourceforge.net/), install package `espeak` on linux.
     - [mbrola voices for espeak](https://github.com/espeak-ng/espeak-ng/blob/master/docs/mbrola.md#installation-of-standard-packages) also need to be installed to get a better sounding voice
 - [`mimic3`](https://mycroft-ai.gitbook.io/docs/mycroft-technologies/mimic-tts/mimic-3#docker-image) better sounding alternative to espeak, easy to use via docker. See also [mimic3-server](https://github.com/MycroftAI/mimic3/blob/master/docker/mimic3-server) script to run the server more easily.

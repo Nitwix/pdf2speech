@@ -1,3 +1,4 @@
+import math
 import os
 import select
 import subprocess
@@ -15,10 +16,29 @@ SPEED_INCREMENT = 20
 DEFAULT_SPEED_WPM = 200
 TXT_CHUNK_SPLIT_CHAR = "."
 
-def pdf_to_text(pdf_file: str, first_page: int, tmp_dir: Path) -> Path:
+def split_pdf_two_columns(pdf_path: Path, tmp_dir_path: Path) -> Path:
+    """Use krop to split a PDF into two columns."""
+    split_pdf_path = tmp_dir_path / "split_pdf.pdf"
+    
+    # Construct the krop command
+    krop_command = [
+        "krop",
+        "--grid=2x1",
+        str(pdf_path),
+        "--go",
+        "--output",
+        str(split_pdf_path)
+    ]
+
+    # Run the krop command using subprocess.run
+    subprocess.run(krop_command, check=True)
+
+    return split_pdf_path
+
+def pdf_to_text(pdf_file: Path, first_page: int, tmp_dir: Path) -> Path:
     tmp_txt = tmp_dir / "pdf.txt"
     subprocess.run(["pdftotext", "-f", 
-                    str(first_page), pdf_file, str(tmp_txt)], check=True)
+                    str(first_page), str(pdf_file), str(tmp_txt)], check=True)
     return tmp_txt
 
 def txt_to_wav_espeak(txt_path: Path, speed: int) -> Path:
@@ -137,12 +157,20 @@ def main():
     parser.add_argument("--chunk_size", default=5, type=int, help="Text chunks size")
     parser.add_argument("--engine", choices=["espeak", "mimic3"], default="mimic3",
                         help="Engine used for TTS")
+    parser.add_argument("--two_columns", action='store_true', help="Assumes pdf has two columns")
 
     args = parser.parse_args()
 
     with TemporaryDirectory(prefix="pdf2speech_") as tmp_dir:
         tmp_dir_path = Path(tmp_dir)
-        pdf_txt_path = pdf_to_text(args.filename, args.first_page, tmp_dir_path)
+        pdf_path = Path(args.filename)
+        pdf_txt_path = None
+        if args.two_columns:
+            pdf_two_cols = split_pdf_two_columns(pdf_path, tmp_dir_path)
+            first_page = 2*args.first_page - 1 
+            pdf_txt_path = pdf_to_text(pdf_two_cols, first_page, tmp_dir_path)
+        else:
+            pdf_txt_path = pdf_to_text(pdf_path, args.first_page, tmp_dir_path)
         chunk_paths = file_make_chunks(tmp_dir_path, pdf_txt_path, args.chunk_size)
 
         curr_speed = args.speed
