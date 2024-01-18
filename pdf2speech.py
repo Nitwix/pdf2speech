@@ -10,6 +10,7 @@ from typing import List
 from pathlib import Path
 from time import sleep
 import requests
+import unicodedata
 
 SLEEP_INTERVAL = 0.1
 SPEED_INCREMENT = 20
@@ -35,10 +36,20 @@ def split_pdf_two_columns(pdf_path: Path, tmp_dir_path: Path) -> Path:
 
     return split_pdf_path
 
+def fix_text_for_TTS(tmp_txt: Path) -> None:
+    with open(tmp_txt, "r+") as txt_file:
+        txt = txt_file.read()
+        # Fixes ligatures like "ﬁ" which are not read properly by TTS
+        fixed_txt = unicodedata.normalize("NFKD", txt)
+        txt_file.seek(0)
+        txt_file.write(fixed_txt)
+
 def pdf_to_text(pdf_file: Path, first_page: int, tmp_dir: Path) -> Path:
     tmp_txt = tmp_dir / "pdf.txt"
     subprocess.run(["pdftotext", "-f", 
                     str(first_page), str(pdf_file), str(tmp_txt)], check=True)
+    
+    fix_text_for_TTS(tmp_txt)
     return tmp_txt
 
 def txt_to_wav_espeak(txt_path: Path, speed: int) -> Path:
