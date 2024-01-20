@@ -257,6 +257,11 @@ def main():
             stop_playing.set()
             if prev_chunk_i == chunk_i and is_playing:
                 chunk_i += 1
+        
+        # handle case if pf_thread still running
+        if pf_thread and pf_thread.is_alive():
+            print("Waiting on pf thread to quit...")
+            pf_thread.join() # prevent concurrency error
 
 
 if __name__ == "__main__":
