@@ -7,6 +7,7 @@ import argparse
 import sys
 from tempfile import TemporaryDirectory
 from threading import Thread, Event
+import threading
 from typing import List
 from pathlib import Path
 from time import sleep
@@ -17,6 +18,10 @@ SLEEP_INTERVAL = 0.1
 SPEED_INCREMENT = 20
 DEFAULT_SPEED_WPM = 200
 TXT_CHUNK_SPLIT_CHAR = "."
+
+# global variable pointing to last running prefetch thread
+# allows to wait for prefetch to terminate before starting new operation
+pf_thread = None
 
 def split_pdf_two_columns(pdf_path: Path, tmp_dir_path: Path) -> Path:
     """Use krop to split a PDF into two columns."""
@@ -74,6 +79,10 @@ def txt_to_wav_mimic3(txt_path: Path, speed_wpm: int) -> Path:
     See for API docs:
     https://mycroft-ai.gitbook.io/docs/mycroft-technologies/mimic-tts/mimic-3#web-server
     """
+    if pf_thread and threading.current_thread() != pf_thread and pf_thread.is_alive():
+        # if the prefetch thread is already working on sth, let it finish.
+        pf_thread.join()
+
     tmp_wav = txt_path.with_suffix(f".s_{speed_wpm}.wav")
     if os.path.exists(tmp_wav):
         return tmp_wav
@@ -213,6 +222,7 @@ def main():
                 if next_chunk_i < len(chunk_paths):
                     next_chunk = chunk_paths[next_chunk_i]
                     # prefetch the next chunk with current speed
+                    global pf_thread
                     pf_thread = Thread(target=txt_to_wav_mimic3, args=(next_chunk, curr_speed))
                     pf_thread.start()
             stop_playing = Event()
