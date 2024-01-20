@@ -1,5 +1,6 @@
 import math
 import os
+import re
 import select
 import subprocess
 import argparse
@@ -118,9 +119,19 @@ def play_wav(wav_path: Path, stop_playing: Event) -> Thread:
     return thread
 
 def text_cut_chunks(txt: str, chunk_size: int) -> List[str]:
-    words = txt.split(TXT_CHUNK_SPLIT_CHAR)
-    chunk_lists = [words[i:i + chunk_size] for i in range(0, len(words), chunk_size)]
-    return [TXT_CHUNK_SPLIT_CHAR.join(l) for l in chunk_lists]
+    sentence_end = re.compile(r'[a-z]{2}\.\s+[A-Z]', re.MULTILINE)
+    matches = sentence_end.finditer(txt)
+    # -1 because we consume the first character of the next sentence
+    splits = [match.end()-1 for match in matches]
+    chunks = []
+    start_i = 0
+    end_i = 0
+    for i, pos in enumerate(splits):
+        if i > 0 and i % chunk_size == 0:
+            start_i = end_i
+            end_i = pos
+            chunks.append(txt[start_i:end_i])
+    return chunks
 
 def file_make_chunks(tmp_dir: Path, txt_path: Path, chunk_size: int) -> List[Path]:
     with open(txt_path, "r") as txt_file:
@@ -165,7 +176,7 @@ def main():
     parser.add_argument("filename", help="PDF filename")
     parser.add_argument("--first_page", default=1, type=int, help="First page number")
     parser.add_argument("--speed", default=DEFAULT_SPEED_WPM, type=int, help="Speech speed (words per minute)")
-    parser.add_argument("--chunk_size", default=5, type=int, help="Text chunks size")
+    parser.add_argument("--chunk_size", default=2, type=int, help="Text chunks size")
     parser.add_argument("--engine", choices=["espeak", "mimic3"], default="mimic3",
                         help="Engine used for TTS")
     parser.add_argument("--two_columns", action='store_true', help="Assumes pdf has two columns")
@@ -240,3 +251,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # txt = ""
+    # with open("test_data/pg11.txt", "r") as file:
+    #     txt = file.read()
+    # print(text_cut_chunks(txt, 5))
